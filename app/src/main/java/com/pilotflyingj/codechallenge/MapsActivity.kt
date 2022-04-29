@@ -19,21 +19,21 @@ import com.pilotflyingj.codechallenge.viewmodel.MapsViewModel
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
-class MapsActivity : AppCompatActivity(), GoogleMap.OnMarkerClickListener, OnMapReadyCallback {
+class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private val mapsViewModel: MapsViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_maps)
-        // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         (supportFragmentManager.findFragmentById(R.id.map) as? SupportMapFragment)?.getMapAsync(this)
     }
 
     override fun onMapReady(googleMap: GoogleMap) {
-        // TODO: center camera on the entire USA
-        // TODO: subscribe to live data for view model so that markers get added
-        // TODO: make sure rotation works
+        //default camera to middle of USA
+        googleMap.moveCamera(CameraUpdateFactory.newLatLng(LatLng(39.8097343, -98.5556199)))
+        googleMap.animateCamera(CameraUpdateFactory.zoomTo(3.5f))
+
         mapsViewModel.locations().observe(this) { locations ->
 
             for (location in locations) {
@@ -53,18 +53,16 @@ class MapsActivity : AppCompatActivity(), GoogleMap.OnMarkerClickListener, OnMap
                 marker?.tag = locations.indexOf(location)
             }
 
-            //default camera to middle of USA
-            googleMap.moveCamera(CameraUpdateFactory.newLatLng(LatLng(39.8097343, -98.5556199)))
-            googleMap.animateCamera(CameraUpdateFactory.zoomTo(3.5f))
+            googleMap.setOnMarkerClickListener(markerListener)
         }
     }
 
-    override fun onMarkerClick(marker: Marker): Boolean {
-        // Get store id from the marker.
-        Log.d("Test", "CLICKED")
-        val id = marker.tag as? Int
+    private val markerListener = GoogleMap.OnMarkerClickListener { marker ->
         lateinit var location: ApiSite
         lateinit var spaceAvailability: SpaceAvailability
+        // Get store id from the marker.
+        val id = marker.tag as? Int
+
         mapsViewModel.locations().observe(this) { locations ->
             if (id != null) {
                 location = locations[id]
@@ -72,13 +70,12 @@ class MapsActivity : AppCompatActivity(), GoogleMap.OnMarkerClickListener, OnMap
             }
         }
 
-        marker.showInfoWindow()
         Toast.makeText(
             this,
             "${marker.title}'s store number is ${location.storeNum}. Available spaces: ${spaceAvailability.available}.",
             Toast.LENGTH_SHORT
         ).show()
 
-        return false
+        return@OnMarkerClickListener false
     }
 }

@@ -3,9 +3,9 @@ package com.pilotflyingj.codechallenge
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import com.pilotflyingj.codechallenge.network.LocationService
+import com.pilotflyingj.codechallenge.network.models.ApiSite
 import com.pilotflyingj.codechallenge.repository.MapRepository
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.*
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.mockwebserver.MockResponse
@@ -14,50 +14,39 @@ import org.junit.After
 import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
-import org.junit.runner.RunWith
 import retrofit2.Retrofit
 
-@RunWith(AndroidJUnit4::class)
 class ApiTest {
-    private lateinit var mLocationRepo: MapRepository
 
+    private lateinit var response: List<ApiSite>
+    private lateinit var mapRepository: MapRepository
 
-    private val mMockWebServer = MockWebServer()
-
+    private val mockWebServer = MockWebServer()
 
     private val contentType =  "application/json".toMediaType()
 
     private val json = Json { coerceInputValues = true }
 
-    private val mApi = Retrofit.Builder()
-        .baseUrl(mMockWebServer.url("/"))
-        .addConverterFactory(json.asConverterFactory(contentType)).build().create(LocationService::class.java)
-
-
-
-    @Before
-    fun setup() {
-        mLocationRepo = MapRepository(mApi)
-    }
-
-    @After
-    fun cleanUp() {
-        mMockWebServer.shutdown()
-    }
-
+    private val api = Retrofit.Builder()
+        .baseUrl(mockWebServer.url("/"))
+        .addConverterFactory(json.asConverterFactory(contentType))
+        .build()
+        .create(LocationService::class.java)
 
     @ExperimentalCoroutinesApi
     @Test
-    fun testSuccessfulRepositoryResponse()  {
-        mMockWebServer.apply {
+    fun `correct api response returns with size of 345`()  {
+        mapRepository = MapRepository(api)
+
+        mockWebServer.apply {
             enqueue(MockResponse().setBody(MockFileReader("locations.json").getFakeJsonResponse()))
         }
 
-        val response = runBlocking{ mLocationRepo.getAllLocations()}
-
-        Assert.assertNotNull(response)
-        Assert.assertEquals(response.size, 345 )
-
+        GlobalScope.launch {
+            response = mapRepository.getAllLocations()
+            Assert.assertNotNull(response)
+            Assert.assertEquals(response.size, 345 )
+        }
     }
 
 }
