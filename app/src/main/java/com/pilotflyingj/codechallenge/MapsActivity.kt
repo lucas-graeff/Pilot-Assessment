@@ -1,5 +1,6 @@
 package com.pilotflyingj.codechallenge
 
+import android.content.ContentValues
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
@@ -11,7 +12,6 @@ import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
 import com.pilotflyingj.codechallenge.network.models.ApiSite
 import com.pilotflyingj.codechallenge.network.models.SpaceAvailability
@@ -29,6 +29,32 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         (supportFragmentManager.findFragmentById(R.id.map) as? SupportMapFragment)?.getMapAsync(this)
     }
 
+    private val markerListener = GoogleMap.OnMarkerClickListener { marker ->
+        lateinit var location: ApiSite
+        lateinit var spaceAvailability: SpaceAvailability
+        // Get store id from the marker.
+        val id = marker.tag as? Int
+
+        mapsViewModel.locations().observe(this) { locations ->
+            if (id != null) {
+                try {
+                    location = locations[id]
+                    spaceAvailability = location.spaceAvailability[0]
+
+                    Toast.makeText(
+                        this,
+                        "${marker.title}'s store number is ${location.storeNum}. Available spaces: ${spaceAvailability.available}.",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                } catch (e: Exception) {
+                    Log.e(ContentValues.TAG, "${e.message}")
+                }
+            }
+        }
+
+        return@OnMarkerClickListener false
+    }
+
     override fun onMapReady(googleMap: GoogleMap) {
         //default camera to middle of USA
         googleMap.moveCamera(CameraUpdateFactory.newLatLng(LatLng(39.8097343, -98.5556199)))
@@ -37,7 +63,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         mapsViewModel.locations().observe(this) { locations ->
 
             for (location in locations) {
-                val currentLocationLatLng = LatLng(location.latitude, location.longitude)
+                val locationLatLng = LatLng(location.latitude, location.longitude)
                 val color = if (location.storeName == "Flying J") {
                     39.901f
                 } else {
@@ -45,7 +71,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
                 }
                 val marker = googleMap.addMarker(
                     MarkerOptions()
-                        .position(currentLocationLatLng)
+                        .position(locationLatLng)
                         .title(location.storeName)
                         .snippet(location.address)
                         .icon(BitmapDescriptorFactory.defaultMarker(color))
@@ -57,25 +83,4 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
-    private val markerListener = GoogleMap.OnMarkerClickListener { marker ->
-        lateinit var location: ApiSite
-        lateinit var spaceAvailability: SpaceAvailability
-        // Get store id from the marker.
-        val id = marker.tag as? Int
-
-        mapsViewModel.locations().observe(this) { locations ->
-            if (id != null) {
-                location = locations[id]
-                spaceAvailability = location.spaceAvailability[0]
-            }
-        }
-
-        Toast.makeText(
-            this,
-            "${marker.title}'s store number is ${location.storeNum}. Available spaces: ${spaceAvailability.available}.",
-            Toast.LENGTH_SHORT
-        ).show()
-
-        return@OnMarkerClickListener false
-    }
 }

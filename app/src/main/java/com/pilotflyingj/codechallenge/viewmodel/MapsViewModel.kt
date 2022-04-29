@@ -9,7 +9,6 @@ import androidx.lifecycle.viewModelScope
 import com.pilotflyingj.codechallenge.network.models.ApiSite
 import com.pilotflyingj.codechallenge.repository.MapRepository
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 class MapsViewModel @ViewModelInject constructor(private val repository: MapRepository) :
@@ -17,21 +16,16 @@ class MapsViewModel @ViewModelInject constructor(private val repository: MapRepo
     private var mLocations = MutableLiveData<List<ApiSite>>()
 
     init {
-        getLocationData()
-    }
-
-    private fun getLocationData() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val locations = repository.getAllLocations()
                 mLocations.postValue(locations)
             } catch (e: Exception) {
-                Log.e(ContentValues.TAG, "getLocationData: ${e.message}")
+                Log.e(ContentValues.TAG, "${e.message}")
             }
 
         }
     }
 
     fun locations() = mLocations
-
 }
